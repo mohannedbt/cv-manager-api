@@ -1,2 +1,2 @@
-CV Manager — REST API
+# CV Manager — REST API
 A RESTful API built with NestJS and TypeORM for managing CVs, users, and skills. This project covers CRUD operations, database seeding, JWT authentication middleware, Passport-based auth, role-based access control, and protected routes.
