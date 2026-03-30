@@ -13,14 +13,14 @@ NestJS + TypeORM REST API for managing CVs, users, and skills.
 1. Copy `.env.example` to `.env`.
 2. Fill in your local database values.
 
-Required variables:
+Environment variables:
 
-- `DB_HOST`
-- `DB_PORT`
-- `DB_USERNAME`
-- `DB_PASSWORD`
-- `DB_NAME`
-- `JWT_SECRET`
+- `DB_HOST` (optional; default configured in `app.module.ts`)
+- `DB_PORT` (optional; default configured in `app.module.ts`)
+- `DB_USERNAME` (optional; default configured in `app.module.ts`)
+- `DB_PASSWORD` (optional; default configured in `app.module.ts`)
+- `DB_NAME` (optional; default configured in `app.module.ts`)
+- `JWT_SECRET` (required)
 - `PORT` (optional, default: `3000`)
 
 ## Install
