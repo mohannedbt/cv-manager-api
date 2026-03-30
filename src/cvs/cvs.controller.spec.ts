@@ -8,7 +8,12 @@ describe('CvsController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CvsController],
-      providers: [CvsService],
+      providers: [
+        {
+          provide: CvsService,
+          useValue: {},
+        },
+      ],
     }).compile();
 
     controller = module.get<CvsController>(CvsController);
