@@ -8,11 +8,17 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
 
+const envFilePath = [join(process.cwd(), '.env')];
+
+if (process.env.ALLOW_PARENT_ENV === 'true') {
+  envFilePath.push(join(process.cwd(), '..', '.env'));
+}
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [join(process.cwd(), '.env'), join(process.cwd(), '..', '.env')],
+      envFilePath,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

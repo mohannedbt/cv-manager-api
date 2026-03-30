@@ -1,6 +1,7 @@
 import {
 	IsArray,
 	IsInt,
+	ValidateIf,
 	IsOptional,
 	IsString,
 	Max,
@@ -29,11 +30,11 @@ export class CreateCvDto {
 	@IsString()
 	path?: string | null;
 
-	@IsOptional()
+	@ValidateIf((_, value) => value !== undefined)
 	@IsInt()
 	userId?: number;
 
-	@IsOptional()
+	@ValidateIf((_, value) => value !== undefined)
 	@IsArray()
 	@IsInt({ each: true })
 	skillIds?: number[];
