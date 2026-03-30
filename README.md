@@ -4,7 +4,7 @@ NestJS + TypeORM REST API for managing CVs, users, and skills.
 
 ## Requirements
 
-- Node.js 20+
+- Node.js >= 20.11
 - MySQL 8+
 - npm 10+
 
