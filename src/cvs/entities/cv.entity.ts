@@ -24,7 +24,7 @@ export class Cv {
   job: string;
 
   @Column({ nullable: true })      
-  path: string;
+  path: string | null;
 
   @ManyToOne(() => User, user => user.cvs)      
   user: User;                                
