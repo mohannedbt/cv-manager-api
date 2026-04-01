@@ -8,6 +8,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
 
+import { AuthModule } from './auth/auth.module'; 
+
 const envFilePath = [join(process.cwd(), '.env')];
 
 if (process.env.ALLOW_PARENT_ENV === 'true') {
@@ -37,6 +39,7 @@ if (process.env.ALLOW_PARENT_ENV === 'true') {
     CvsModule,
     UsersModule,
     SkillsModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
