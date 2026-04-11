@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,6 +11,7 @@ import { CreateCvDto } from './dto/create-cv.dto';
 import { UpdateCvDto } from './dto/update-cv.dto';
 import { User } from '../users/entities/user.entity';
 import { Skill } from '../skills/entities/skill.entity';
+import { AuthenticatedUser } from '../common/interfaces/auth.interface';
 
 type CvFilters = {
   name?: string;
@@ -27,16 +29,20 @@ export class CvsService {
     private skillRepository: Repository<Skill>,
   ) {}
 
-  async create(createCvDto: CreateCvDto): Promise<Cv> {
+  async create(createCvDto: CreateCvDto, actor: AuthenticatedUser): Promise<Cv> {
     const { userId, skillIds, ...cvData } = createCvDto;
-    const user = await this.resolveUser(userId);
+    // Owner is always the connected user (TP ownership requirement).
+    const user = await this.resolveUser(actor.userId);
     const skills = await this.resolveSkills(skillIds);
+
+    // Reject client-side owner override attempts.
+    if (userId !== undefined && userId !== actor.userId) {
+      throw new BadRequestException('CV owner must match authenticated user');
+    }
 
     const cv = this.cvRepository.create(cvData);
 
-    if (user) {
-      cv.user = user;
-    }
+    cv.user = user;
 
     if (skills !== undefined) {
       cv.skills = skills;
@@ -45,7 +51,7 @@ export class CvsService {
     return this.cvRepository.save(cv);
   }
 
-  async findAll(filters?: CvFilters): Promise<Cv[]> {
+  async findAll(actor: AuthenticatedUser, filters?: CvFilters): Promise<Cv[]> {
     const whereClause: FindOptionsWhere<Cv> = {};
 
     if (filters?.name) {
@@ -56,13 +62,18 @@ export class CvsService {
       whereClause.age = filters.age;
     }
 
+    // Admin sees all CVs; regular users only see their own CVs.
+    if (actor.role !== 'admin') {
+      whereClause.user = { id: actor.userId };
+    }
+
     return this.cvRepository.find({
       where: whereClause,
       relations: ['user', 'skills'],
     });
   }
 
-  async findOne(id: number): Promise<Cv> {
+  async findOne(id: number, actor: AuthenticatedUser): Promise<Cv> {
     const cv = await this.cvRepository.findOne({
       where: { id },
       relations: ['user', 'skills'],
@@ -72,10 +83,28 @@ export class CvsService {
       throw new NotFoundException(`CV with id ${id} not found`);
     }
 
+    if (actor.role !== 'admin' && cv.user?.id !== actor.userId) {
+      throw new ForbiddenException('You can only access your own CVs');
+    }
+
     return cv;
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number, actor: AuthenticatedUser): Promise<void> {
+    const cv = await this.cvRepository.findOne({
+      where: { id },
+      relations: ['user'],
+    });
+
+    if (!cv) {
+      throw new NotFoundException(`CV with id ${id} not found`);
+    }
+
+    // Only CV creator can delete.
+    if (cv.user?.id !== actor.userId) {
+      throw new ForbiddenException('Only the creator can delete this CV');
+    }
+
     const result = await this.cvRepository.delete(id);
 
     if (!result.affected) {
@@ -83,15 +112,28 @@ export class CvsService {
     }
   }
 
-  async update(id: number, updateCvDto: UpdateCvDto): Promise<Cv> {
-    const cv = await this.findOne(id);
+  async update(id: number, updateCvDto: UpdateCvDto, actor: AuthenticatedUser): Promise<Cv> {
+    const cv = await this.cvRepository.findOne({
+      where: { id },
+      relations: ['user', 'skills'],
+    });
+
+    if (!cv) {
+      throw new NotFoundException(`CV with id ${id} not found`);
+    }
+
+    // Only CV creator can update.
+    if (cv.user?.id !== actor.userId) {
+      throw new ForbiddenException('Only the creator can update this CV');
+    }
+
     const { userId, skillIds, ...cvData } = updateCvDto;
 
-    Object.assign(cv, cvData);
-
-    if (userId !== undefined) {
-      cv.user = await this.resolveUser(userId);
+    if (userId !== undefined && userId !== cv.user?.id) {
+      throw new BadRequestException('Changing CV owner is not allowed');
     }
+
+    Object.assign(cv, cvData);
 
     if (skillIds !== undefined) {
       cv.skills = (await this.resolveSkills(skillIds)) ?? [];

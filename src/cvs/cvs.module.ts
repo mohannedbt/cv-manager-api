@@ -1,4 +1,4 @@
-import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
 import { CvsService } from './cvs.service';
 import { CvsController } from './cvs.controller';
 import { Cv } from './entities/cv.entity';
@@ -17,9 +17,9 @@ export class CvsModule implements NestModule {
     consumer
       .apply(AuthUserMiddleware)
       .forRoutes(
-        { path: 'cvs', method: 1 }, // POST
-        { path: 'cvs/:id', method: 3 }, // PATCH
-        { path: 'cvs/:id', method: 5 }, // DELETE
+        { path: 'cvs', method: RequestMethod.POST },
+        { path: 'cvs/:id', method: RequestMethod.PATCH },
+        { path: 'cvs/:id', method: RequestMethod.DELETE },
       );
   }
 }

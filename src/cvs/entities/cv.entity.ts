@@ -6,30 +6,30 @@ import { Skill } from '../../skills/entities/skill.entity';
 export class Cv {
 
   @PrimaryGeneratedColumn()       
-  id: number;
+  id!: number;
 
   @Column()                     
-  name: string;
+  name!: string;
 
   @Column()
-  firstname: string;
+  firstname!: string;
 
   @Column()
-  age: number;
+  age!: number;
 
   @Column()
-  cin: string;
+  cin!: string;
 
   @Column()
-  job: string;
+  job!: string;
 
   @Column({ type: 'varchar', nullable: true })      
-  path: string | null;
+  path!: string | null;
 
   @ManyToOne(() => User, user => user.cvs)      
-  user: User;                                
+  user!: User;                                
 
   @ManyToMany(() => Skill, skill => skill.cvs)  
   @JoinTable()                               
-  skills: Skill[];
+  skills!: Skill[];
 }

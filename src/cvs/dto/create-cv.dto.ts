@@ -10,21 +10,21 @@ import {
 
 export class CreateCvDto {
 	@IsString()
-	name: string;
+	name!: string;
 
 	@IsString()
-	firstname: string;
+	firstname!: string;
 
 	@IsInt()
 	@Min(16)
 	@Max(100)
-	age: number;
+	age!: number;
 
 	@IsString()
-	cin: string;
+	cin!: string;
 
 	@IsString()
-	job: string;
+	job!: string;
 
 	@IsOptional()
 	@IsString()
