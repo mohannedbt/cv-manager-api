@@ -1,10 +1,23 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, ForbiddenException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Req,
+  ForbiddenException,
+} from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { MyGuard } from 'src/auth/auth.myguard';
-import { User } from './entities/user.entity';
-import { AdminRoles } from 'src/auth/enums/auth.adminroles';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { AdminRoles } from '../auth/enums/auth.adminroles';
+import type { AuthenticatedRequest } from '../common/interfaces/auth.interface';
 
 @Controller('users')
 export class UsersController {
@@ -14,27 +27,37 @@ export class UsersController {
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
-  @UseGuards(MyGuard) // Make it so only users with admin roles can access the following endpoints
+
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(AdminRoles.ADMIN)
   @Get()
   findAll() {
     return this.usersService.findAll();
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Get(':id')
-  findOne(@Param('id') id: string, @Req() req) {
-    const loggedInUser = req.user; 
-    const targetId = +id;         
-    if (loggedInUser.id === targetId || loggedInUser.role in AdminRoles) {
+  findOne(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const loggedInUser = req.user;
+    const targetId = +id;
+
+    if (
+      loggedInUser &&
+      (loggedInUser.userId === targetId || loggedInUser.role === AdminRoles.ADMIN)
+    ) {
       return this.usersService.findOne(targetId);
     }
 
-    throw new ForbiddenException("You do not have permission to view this profile.");
+    throw new ForbiddenException('You do not have permission to view this profile.');
   }
+
+  @UseGuards(AuthGuard('jwt'))
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(+id, updateUserDto);
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.remove(+id);
