@@ -1,0 +1,180 @@
+@baseUrl = http://localhost:3000
+@json = application/json
+@runId = 20260411a
+@userUsername = user_{{runId}}
+@adminUsername = admin_{{runId}}
+@userEmail = {{userUsername}}@test.local
+@adminEmail = {{adminUsername}}@test.local
+@password = 123456
+
+### 0) Health check (expected: 200)
+GET {{baseUrl}}/
+
+### 1) Register normal user through AuthModule (expected: 201)
+# @name registerUser
+POST {{baseUrl}}/auth/register
+Content-Type: {{json}}
+
+{
+  "username": "{{userUsername}}",
+  "email": "{{userEmail}}",
+  "password": "{{password}}"
+}
+
+### 2) Register admin candidate through AuthModule (expected: 201)
+# @name registerAdminCandidate
+POST {{baseUrl}}/auth/register
+Content-Type: {{json}}
+
+{
+  "username": "{{adminUsername}}",
+  "email": "{{adminEmail}}",
+  "password": "{{password}}"
+}
+
+### 3) Login normal user (expected: 201 with access_token)
+# @name loginUser
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{
+  "username": "{{userUsername}}",
+  "password": "{{password}}"
+}
+
+### 4) Login admin candidate (expected: 201 with access_token)
+# @name loginAdminCandidate
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{
+  "username": "{{adminUsername}}",
+  "password": "{{password}}"
+}
+
+### 5) Promote admin candidate to admin role (expected: 200)
+# Note: This uses current route behavior; after patch, login again to get a token carrying role=admin.
+# @name promoteAdmin
+PATCH {{baseUrl}}/users/{{registerAdminCandidate.response.body.id}}
+Authorization: Bearer {{loginAdminCandidate.response.body.access_token}}
+Content-Type: {{json}}
+
+{
+  "role": "admin"
+}
+
+### 6) Login admin after role promotion (expected: 201 with admin role in token)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{
+  "username": "{{adminUsername}}",
+  "password": "{{password}}"
+}
+
+### 7) Create CV as normal user (WRITE routes use auth-user middleware) (expected: 201)
+# @name createUserCv
+POST {{baseUrl}}/cvs
+auth-user: {{loginUser.response.body.access_token}}
+Content-Type: {{json}}
+
+{
+  "name": "UserCV",
+  "firstname": "Owner",
+  "age": 24,
+  "cin": "CINU{{runId}}",
+  "job": "Developer"
+}
+
+### 8) Create CV as admin (expected: 201)
+# @name createAdminCv
+POST {{baseUrl}}/cvs
+auth-user: {{loginAdmin.response.body.access_token}}
+Content-Type: {{json}}
+
+{
+  "name": "AdminCV",
+  "firstname": "Owner",
+  "age": 30,
+  "cin": "CINA{{runId}}",
+  "job": "Lead"
+}
+
+### 9) User fetches CV list (READ routes use Bearer JWT guard) (expected: 200, only own CVs)
+# @name listAsUser
+GET {{baseUrl}}/cvs
+Authorization: Bearer {{loginUser.response.body.access_token}}
+
+### 10) Admin fetches CV list (expected: 200, can see all CVs)
+# @name listAsAdmin
+GET {{baseUrl}}/cvs
+Authorization: Bearer {{loginAdmin.response.body.access_token}}
+
+### 11) User tries to update admin CV (expected: 403)
+PATCH {{baseUrl}}/cvs/{{createAdminCv.response.body.id}}
+auth-user: {{loginUser.response.body.access_token}}
+Content-Type: {{json}}
+
+{
+  "job": "Hacker"
+}
+
+### 12) User tries to delete admin CV (expected: 403)
+DELETE {{baseUrl}}/cvs/{{createAdminCv.response.body.id}}
+auth-user: {{loginUser.response.body.access_token}}
+
+### 13) User updates own CV (expected: 200)
+PATCH {{baseUrl}}/cvs/{{createUserCv.response.body.id}}
+auth-user: {{loginUser.response.body.access_token}}
+Content-Type: {{json}}
+
+{
+  "job": "Senior Developer"
+}
+
+### 14) User deletes own CV (expected: 200/204)
+DELETE {{baseUrl}}/cvs/{{createUserCv.response.body.id}}
+auth-user: {{loginUser.response.body.access_token}}
+
+### 15) WRITE without auth-user header (expected: 401)
+POST {{baseUrl}}/cvs
+Content-Type: {{json}}
+
+{
+  "name": "NoToken",
+  "firstname": "Fail",
+  "age": 20,
+  "cin": "CINFAIL{{runId}}",
+  "job": "None"
+}
+
+### 16) WRITE with invalid auth-user token (expected: 401)
+POST {{baseUrl}}/cvs
+auth-user: invalid.token.value
+Content-Type: {{json}}
+
+{
+  "name": "BadToken",
+  "firstname": "Fail",
+  "age": 20,
+  "cin": "CINBAD{{runId}}",
+  "job": "None"
+}
+
+### 17) READ without Bearer token (expected: 401)
+GET {{baseUrl}}/cvs
+
+### 18) DTO null checks (expected: 400)
+POST {{baseUrl}}/cvs
+auth-user: {{loginUser.response.body.access_token}}
+Content-Type: {{json}}
+
+{
+  "name": "NullCase",
+  "firstname": "Validation",
+  "age": 28,
+  "cin": "CINNULL{{runId}}",
+  "job": "QA",
+  "skillIds": null
+}

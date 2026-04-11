@@ -5,32 +5,49 @@ import { UsersService } from '../users/users.service';
 import { SkillsService } from '../skills/skills.service';
 import { Skill } from '../skills/entities/skill.entity';
 import { User } from '../users/entities/user.entity';
-import { randFirstName, randLastName, randJobTitle, randNumber, randEmail, randUserName } from '@ngneat/falso';
+import {
+  randEmail,
+  randFirstName,
+  randJobTitle,
+  randLastName,
+  randNumber,
+  randUserName,
+} from '@ngneat/falso';
 
 async function bootstrap() {
+  // TP seeding requirement: run as a standalone Nest context (no HTTP server).
   const app = await NestFactory.createApplicationContext(AppModule);
 
   const usersService = app.get(UsersService);
   const skillsService = app.get(SkillsService);
   const cvsService = app.get(CvsService);
 
-  // 1. Seed Skills
-  const skillNames = ['JavaScript', 'TypeScript', 'NestJS', 'React', 'Docker', 'SQL',"Python", "Java", "C#", "AWS"];
-  const skills: Skill[] = []; 
+  const skillNames = [
+    'JavaScript',
+    'TypeScript',
+    'NestJS',
+    'React',
+    'Docker',
+    'SQL',
+    'Python',
+    'Java',
+    'C#',
+    'AWS',
+  ];
 
+  const skills: Skill[] = [];
   for (const name of skillNames) {
     const skill = await skillsService.create({ designation: name });
     skills.push(skill);
   }
 
-  // 2. Seed Users
-  const users: User[] = [];  
-
+  const users: User[] = [];
   for (let i = 0; i < 5; i++) {
     const user = await usersService.create({
       username: randUserName(),
       email: randEmail(),
       password: 'thisisapassword',
+      // First seeded user is admin so admin-only behavior can be tested quickly.
       role: i === 0 ? 'admin' : 'user',
     });
     users.push(user);
@@ -50,10 +67,10 @@ async function bootstrap() {
         cin: `TN${randNumber({ min: 10000000, max: 99999999 })}`,
         job: randJobTitle(),
         path: null,
-        userId: randomUser.id,
-        skillIds: randomSkills.map(s => s.id),
+        skillIds: randomSkills.map((s) => s.id),
       },
       {
+        // Seeder acts as the connected user/owner for the generated CV.
         userId: randomUser.id,
         username: randomUser.username,
         role: randomUser.role,
