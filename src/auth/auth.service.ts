@@ -16,7 +16,8 @@ export class AuthService {
     if (existing) {
       throw new ConflictException('Username already taken');
     }
-    const hashed = await bcrypt.hash(dto.password, 10); // 10 = salt rounds
+    // Password is hashed before persistence so login can verify with bcrypt.compare.
+    const hashed = await bcrypt.hash(dto.password, 10);
     return this.usersService.create({ ...dto, password: hashed });
   }
 
@@ -30,6 +31,7 @@ export class AuthService {
   }
 
   async login(user: any) {
+    // role is included in JWT payload so role-based guards can authorize requests.
     const payload = { userId: user.id, username: user.username, role: user.role };
     return { access_token: this.jwtService.sign(payload) };
   }
