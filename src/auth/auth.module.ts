@@ -11,6 +11,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 @Module({
   imports: [
     ConfigModule,
+    // Import UsersModule so AuthService can inject UsersService.
     UsersModule,
     // TP auth stage: Passport + JWT strategy/guards configuration.
     PassportModule,
@@ -23,8 +24,11 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       }),
     }),
   ],
+  // AuthController exposes register/login routes.
   controllers: [AuthController],
+  // Providers are DI-resolved services/strategies used by this module.
   providers: [AuthService, LocalStrategy, JwtStrategy],
+  // Exported providers can be reused by other modules (e.g., JWT guards).
   exports: [JwtStrategy, PassportModule],
 })
 export class AuthModule {}

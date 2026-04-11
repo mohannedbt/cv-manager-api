@@ -18,10 +18,12 @@ if (process.env.ALLOW_PARENT_ENV === 'true') {
 
 @Module({
   imports: [
+    // Global configuration provider, injectable through ConfigService anywhere.
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath,
     }),
+    // Root DB connection provider used by feature modules that register repositories.
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
@@ -39,8 +41,10 @@ if (process.env.ALLOW_PARENT_ENV === 'true') {
     CvsModule,
     UsersModule,
     SkillsModule,
+    // AuthModule exports auth providers/strategies used by guards.
     AuthModule,
   ],
+  // Root controller/provider are app bootstrap defaults.
   controllers: [AppController],
   providers: [AppService],
 })

@@ -29,6 +29,7 @@ export class UsersController {
   }
 
   @UseGuards(AuthGuard('jwt'), RolesGuard)
+  // Example of metadata-driven role protection (no hardcoded logic in guard itself).
   @Roles(AdminRoles.ADMIN)
   @Get()
   findAll() {
@@ -41,6 +42,7 @@ export class UsersController {
     const loggedInUser = req.user;
     const targetId = +id;
 
+    // A user can read only their profile; admin can read any profile.
     if (
       loggedInUser &&
       (loggedInUser.userId === targetId || loggedInUser.role === AdminRoles.ADMIN)

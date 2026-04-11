@@ -8,12 +8,15 @@ import { Skill } from '../skills/entities/skill.entity';
 import { AuthUserMiddleware } from '../common/middleware/auth-user.middleware';
 
 @Module({
+  // Registers repositories needed by CvsService (cv + related user/skill checks).
   imports: [TypeOrmModule.forFeature([Cv, User, Skill])],
   controllers: [CvsController],
+  // CvsService holds business rules (ownership, filters, relation validation).
   providers: [CvsService],
 })
 export class CvsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    // TP authMiddleware stage: protect CV write operations via auth-user JWT middleware.
     consumer
       .apply(AuthUserMiddleware)
       .forRoutes(
