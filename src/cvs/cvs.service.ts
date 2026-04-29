@@ -12,6 +12,7 @@ import { UpdateCvDto } from './dto/update-cv.dto';
 import { User } from '../users/entities/user.entity';
 import { Skill } from '../skills/entities/skill.entity';
 import { AuthenticatedUser } from '../common/interfaces/auth.interface';
+import { SseService } from '../sse/sse.service';
 
 type CvFilters = {
   name?: string;
@@ -21,6 +22,7 @@ type CvFilters = {
 @Injectable()
 export class CvsService {
   constructor(
+    private readonly sseService: SseService,
     @InjectRepository(Cv)
     private cvRepository: Repository<Cv>,
     @InjectRepository(User)
@@ -29,28 +31,47 @@ export class CvsService {
     private skillRepository: Repository<Skill>,
   ) {}
 
-  async create(createCvDto: CreateCvDto, actor: AuthenticatedUser): Promise<Cv> {
+  // =========================
+  // CREATE CV (FIXED SSE FLOW)
+  // =========================
+  async create(
+    createCvDto: CreateCvDto,
+    actor: AuthenticatedUser,
+  ): Promise<Cv> {
     const { userId, skillIds, ...cvData } = createCvDto;
-    // Owner is always the connected user (TP ownership requirement).
+
+    // enforce ownership = logged user
     const user = await this.resolveUser(actor.userId);
     const skills = await this.resolveSkills(skillIds);
 
-    // Reject client-side owner override attempts.
     if (userId !== undefined && userId !== actor.userId) {
       throw new BadRequestException('CV owner must match authenticated user');
     }
 
     const cv = this.cvRepository.create(cvData);
-
     cv.user = user;
 
-    if (skills !== undefined) {
+    if (skills) {
       cv.skills = skills;
     }
 
-    return this.cvRepository.save(cv);
+    // ✅ STEP 1: SAVE FIRST (IMPORTANT FIX)
+    const savedCv = await this.cvRepository.save(cv);
+
+    // ✅ STEP 2: THEN EMIT SSE EVENT
+    this.sseService.publish({
+      type: 'CV_CREATED',
+      cvId: savedCv.id,
+      ownerId: savedCv.user.id,
+      payload: savedCv,
+    });
+
+    return savedCv;
   }
 
+  // =========================
+  // FIND ALL CVs
+  // =========================
   async findAll(actor: AuthenticatedUser, filters?: CvFilters): Promise<Cv[]> {
     const whereClause: FindOptionsWhere<Cv> = {};
 
@@ -62,7 +83,7 @@ export class CvsService {
       whereClause.age = filters.age;
     }
 
-    // Admin sees all CVs; regular users only see their own CVs.
+    // admin sees all, user sees only theirs
     if (actor.role !== 'admin') {
       whereClause.user = { id: actor.userId };
     }
@@ -73,6 +94,9 @@ export class CvsService {
     });
   }
 
+  // =========================
+  // FIND ONE
+  // =========================
   async findOne(id: number, actor: AuthenticatedUser): Promise<Cv> {
     const cv = await this.cvRepository.findOne({
       where: { id },
@@ -90,29 +114,14 @@ export class CvsService {
     return cv;
   }
 
-  async remove(id: number, actor: AuthenticatedUser): Promise<void> {
-    const cv = await this.cvRepository.findOne({
-      where: { id },
-      relations: ['user'],
-    });
-
-    if (!cv) {
-      throw new NotFoundException(`CV with id ${id} not found`);
-    }
-
-    // Only CV creator can delete.
-    if (cv.user?.id !== actor.userId) {
-      throw new ForbiddenException('Only the creator can delete this CV');
-    }
-
-    const result = await this.cvRepository.delete(id);
-
-    if (!result.affected) {
-      throw new NotFoundException(`CV with id ${id} not found`);
-    }
-  }
-
-  async update(id: number, updateCvDto: UpdateCvDto, actor: AuthenticatedUser): Promise<Cv> {
+  // =========================
+  // UPDATE CV
+  // =========================
+  async update(
+    id: number,
+    updateCvDto: UpdateCvDto,
+    actor: AuthenticatedUser,
+  ): Promise<Cv> {
     const cv = await this.cvRepository.findOne({
       where: { id },
       relations: ['user', 'skills'],
@@ -122,7 +131,6 @@ export class CvsService {
       throw new NotFoundException(`CV with id ${id} not found`);
     }
 
-    // Only CV creator can update.
     if (cv.user?.id !== actor.userId) {
       throw new ForbiddenException('Only the creator can update this CV');
     }
@@ -136,19 +144,55 @@ export class CvsService {
     Object.assign(cv, cvData);
 
     if (skillIds !== undefined) {
-      cv.skills = (await this.resolveSkills(skillIds)) ?? [];
+      cv.skills = await this.resolveSkills(skillIds) ?? [];
     }
 
-    return this.cvRepository.save(cv);
+    // save update
+    const updatedCv = await this.cvRepository.save(cv);
+
+    // SSE EVENT
+    this.sseService.publish({
+      type: 'CV_UPDATED',
+      cvId: updatedCv.id,
+      ownerId: updatedCv.user.id,
+      payload: updatedCv,
+    });
+
+    return updatedCv;
   }
 
-  private async resolveUser(userId: number): Promise<User>;
-  private async resolveUser(userId?: number): Promise<User | undefined>;
-  private async resolveUser(userId?: number): Promise<User | undefined> {
-    if (userId === undefined) {
-      return undefined;
+  // =========================
+  // DELETE CV
+  // =========================
+  async remove(id: number, actor: AuthenticatedUser): Promise<void> {
+    const cv = await this.cvRepository.findOne({
+      where: { id },
+      relations: ['user'],
+    });
+
+    if (!cv) {
+      throw new NotFoundException(`CV with id ${id} not found`);
     }
 
+    if (cv.user?.id !== actor.userId) {
+      throw new ForbiddenException('Only the creator can delete this CV');
+    }
+
+    await this.cvRepository.delete(id);
+
+    // SSE EVENT
+    this.sseService.publish({
+      type: 'CV_DELETED',
+      cvId: cv.id,
+      ownerId: cv.user.id,
+      payload: cv,
+    });
+  }
+
+  // =========================
+  // HELPERS
+  // =========================
+  private async resolveUser(userId: number): Promise<User> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
 
     if (!user) {
@@ -159,21 +203,17 @@ export class CvsService {
   }
 
   private async resolveSkills(skillIds?: number[]): Promise<Skill[] | undefined> {
-    if (skillIds === undefined) {
-      return undefined;
-    }
-
-    if (skillIds.length === 0) {
-      return [];
-    }
+    if (!skillIds) return undefined;
+    if (skillIds.length === 0) return [];
 
     const uniqueSkillIds = [...new Set(skillIds)];
+
     const skills = await this.skillRepository.find({
       where: { id: In(uniqueSkillIds) },
     });
 
     if (skills.length !== uniqueSkillIds.length) {
-      throw new BadRequestException('One or more provided skills do not exist');
+      throw new BadRequestException('One or more skills do not exist');
     }
 
     return skills;

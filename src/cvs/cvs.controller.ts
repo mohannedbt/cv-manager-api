@@ -19,15 +19,14 @@ import { CreateCvDto } from './dto/create-cv.dto';
 import { UpdateCvDto } from './dto/update-cv.dto';
 
 @Controller('cvs')
+@UseGuards(AuthGuard('jwt')) // ✅ APPLY ON WHOLE CONTROLLER
 export class CvsController {
   constructor(private readonly cvsService: CvsService) {}
 
   private getActor(req: AuthenticatedRequest): AuthenticatedUser {
-    // Service-level authorization relies on a normalized authenticated actor object.
     if (!req.user) {
       throw new UnauthorizedException('Authentication required');
     }
-
     return req.user;
   }
 
@@ -37,8 +36,6 @@ export class CvsController {
   }
 
   @Get()
-  // TP auth stage: read routes use Passport JWT guard (Authorization: Bearer <token>).
-  @UseGuards(AuthGuard('jwt'))
   findAll(
     @Req() req: AuthenticatedRequest,
     @Query('name') name?: string,
@@ -51,8 +48,6 @@ export class CvsController {
   }
 
   @Get(':id')
-  // Ownership/admin access is enforced in CvsService after authentication.
-  @UseGuards(AuthGuard('jwt'))
   findOne(
     @Param('id', ParseIntPipe) id: number,
     @Req() req: AuthenticatedRequest,

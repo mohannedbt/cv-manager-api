@@ -6,10 +6,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../users/entities/user.entity';
 import { Skill } from '../skills/entities/skill.entity';
 import { AuthUserMiddleware } from '../common/middleware/auth-user.middleware';
-
+import { SseModule } from '../sse/sse.module';
 @Module({
   // Registers repositories needed by CvsService (cv + related user/skill checks).
-  imports: [TypeOrmModule.forFeature([Cv, User, Skill])],
+  imports: [TypeOrmModule.forFeature([Cv, User, Skill]),SseModule],
   controllers: [CvsController],
   // CvsService holds business rules (ownership, filters, relation validation).
   providers: [CvsService],
