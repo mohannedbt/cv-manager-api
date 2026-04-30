@@ -13,6 +13,7 @@ import { User } from '../users/entities/user.entity';
 import { Skill } from '../skills/entities/skill.entity';
 import { AuthenticatedUser } from '../common/interfaces/auth.interface';
 import { SseService } from '../sse/sse.service';
+import { CvLogsService } from '../cv-logs/cv-logs.service';
 
 type CvFilters = {
   name?: string;
@@ -29,6 +30,7 @@ export class CvsService {
     private userRepository: Repository<User>,
     @InjectRepository(Skill)
     private skillRepository: Repository<Skill>,
+    private cvLogsService: CvLogsService,
   ) {}
 
   // =========================
@@ -57,6 +59,7 @@ export class CvsService {
 
     // ✅ STEP 1: SAVE FIRST (IMPORTANT FIX)
     const savedCv = await this.cvRepository.save(cv);
+    await this.cvLogsService.log('CREATE', savedCv.id, savedCv.user.id);
 
     // ✅ STEP 2: THEN EMIT SSE EVENT
     this.sseService.publish({
@@ -150,6 +153,8 @@ export class CvsService {
     // save update
     const updatedCv = await this.cvRepository.save(cv);
 
+    await this.cvLogsService.log('UPDATE', id, updatedCv.user.id);
+
     // SSE EVENT
     this.sseService.publish({
       type: 'CV_UPDATED',
@@ -179,6 +184,8 @@ export class CvsService {
     }
 
     await this.cvRepository.delete(id);
+
+    await this.cvLogsService.log('DELETE', id, cv.user.id);
 
     // SSE EVENT
     this.sseService.publish({

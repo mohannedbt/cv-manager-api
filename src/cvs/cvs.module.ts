@@ -7,9 +7,10 @@ import { User } from '../users/entities/user.entity';
 import { Skill } from '../skills/entities/skill.entity';
 import { AuthUserMiddleware } from '../common/middleware/auth-user.middleware';
 import { SseModule } from '../sse/sse.module';
+import { CvLogsModule } from '../cv-logs/cv-logs.module';
 @Module({
   // Registers repositories needed by CvsService (cv + related user/skill checks).
-  imports: [TypeOrmModule.forFeature([Cv, User, Skill]),SseModule],
+  imports: [TypeOrmModule.forFeature([Cv, User, Skill]),SseModule,CvLogsModule],
   controllers: [CvsController],
   // CvsService holds business rules (ownership, filters, relation validation).
   providers: [CvsService],
