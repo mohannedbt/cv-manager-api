@@ -40,15 +40,11 @@ export class CvsService {
       throw new BadRequestException('CV owner must match authenticated user');
     }
 
-    const cv = this.cvRepository.create(cvData);
-
-    cv.user = user;
-
-    if (skills !== undefined) {
-      cv.skills = skills;
-    }
-
-    return this.cvRepository.save(cv);
+    return this.cvRepository.save({
+      ...cvData,
+      user,
+      skills: skills ?? undefined,
+    });
   }
 
   async findAll(actor: AuthenticatedUser, filters?: CvFilters): Promise<Cv[]> {

@@ -27,7 +27,7 @@ export class AuthUserMiddleware implements NestMiddleware {
 
     if (!authUserHeader && !authorizationHeader) {
       throw new HttpException(
-        'Missing auth token. Use auth-user header or Authorization: Bearer <token>',
+        'Unauthorized',
         HttpStatus.UNAUTHORIZED,
       );
     }
@@ -41,15 +41,15 @@ export class AuthUserMiddleware implements NestMiddleware {
       const parts = authorizationHeader.split(' ');
       if (parts.length !== 2 || parts[0] !== 'Bearer') {
         throw new HttpException(
-          'Invalid authorization header format. Expected: Bearer <token>',
-          HttpStatus.BAD_REQUEST,
+          'Unauthorized',
+          HttpStatus.UNAUTHORIZED,
         );
       }
       token = parts[1];
     }
 
     if (!token) {
-      throw new HttpException('Missing token', HttpStatus.UNAUTHORIZED);
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
 
     const jwtSecret = this.configService.get<string>('JWT_SECRET');
@@ -65,7 +65,7 @@ export class AuthUserMiddleware implements NestMiddleware {
       const payload = jwt.verify(token, jwtSecret);
 
       if (!isJwtPayload(payload)) {
-        throw new HttpException('Invalid token payload', HttpStatus.UNAUTHORIZED);
+        throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
       }
 
       // Inject authenticated user context so services can enforce ownership rules.
@@ -80,12 +80,12 @@ export class AuthUserMiddleware implements NestMiddleware {
         throw error;
       }
       if (error instanceof jwt.TokenExpiredError) {
-        throw new HttpException('Token expired', HttpStatus.UNAUTHORIZED);
+        throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
       }
       if (error instanceof jwt.JsonWebTokenError) {
-        throw new HttpException('Invalid token', HttpStatus.UNAUTHORIZED);
+        throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
       }
-      throw new HttpException('Invalid token', HttpStatus.UNAUTHORIZED);
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
   }
 }

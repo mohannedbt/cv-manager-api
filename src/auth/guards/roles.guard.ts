@@ -9,6 +9,9 @@ export class RolesGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     // Reads roles from @Roles(...) metadata so role checks stay extensible.
+    // Reflector's getAllAndOverride checks the handler (the specific route method) first.
+    // If no metadata is found on the method, it checks the class (the controller).
+    // This correctly extracts the context mapping to the requested route.
     const requiredRoles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [
       context.getHandler(),
       context.getClass(),

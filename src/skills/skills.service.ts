@@ -12,8 +12,7 @@ export class SkillsService {
   ) {}
 
   async create(createSkillDto: CreateSkillDto): Promise<Skill> {
-    const skill = this.skillRepository.create(createSkillDto);
-    return this.skillRepository.save(skill);
+    return this.skillRepository.save(createSkillDto);
   }
 
   async findAll(): Promise<Skill[]> {
