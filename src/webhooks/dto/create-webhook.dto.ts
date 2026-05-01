@@ -3,9 +3,9 @@ import { IsUrl, IsString, IsNotEmpty } from 'class-validator';
 export class CreateWebhookDto {
   @IsUrl()
   @IsNotEmpty()
-  url: string;
+  url!: string;
 
   @IsString()
   @IsNotEmpty()
-  event: string;
+  event!: string;
 }
