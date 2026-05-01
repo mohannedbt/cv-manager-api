@@ -12,9 +12,9 @@ import { UpdateCvDto } from './dto/update-cv.dto';
 import { User } from '../users/entities/user.entity';
 import { Skill } from '../skills/entities/skill.entity';
 import { AuthenticatedUser } from '../common/interfaces/auth.interface';
-import { SseService } from '../sse/sse.service';
 import { CvLogsService } from '../cv-logs/cv-logs.service';
-
+import { CV_EVENTS } from '../sse/sse.controller';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 type CvFilters = {
   name?: string;
   age?: number;
@@ -23,7 +23,7 @@ type CvFilters = {
 @Injectable()
 export class CvsService {
   constructor(
-    private readonly sseService: SseService,
+    private eventEmitter: EventEmitter2,
     @InjectRepository(Cv)
     private cvRepository: Repository<Cv>,
     @InjectRepository(User)
@@ -62,11 +62,12 @@ export class CvsService {
     await this.cvLogsService.log('CREATE', savedCv.id, savedCv.user.id);
 
     // ✅ STEP 2: THEN EMIT SSE EVENT
-    this.sseService.publish({
-      type: 'CV_CREATED',
+    this.eventEmitter.emit(CV_EVENTS.modify, {
+      type: 'CREATE',
       cvId: savedCv.id,
-      ownerId: savedCv.user.id,
+      ownerId: userId,
       payload: savedCv,
+      timestamp: new Date(),
     });
 
     return savedCv;
@@ -156,11 +157,12 @@ export class CvsService {
     await this.cvLogsService.log('UPDATE', id, updatedCv.user.id);
 
     // SSE EVENT
-    this.sseService.publish({
-      type: 'CV_UPDATED',
+    this.eventEmitter.emit(CV_EVENTS.modify, {
+      type: 'UPDATE',
       cvId: updatedCv.id,
       ownerId: updatedCv.user.id,
       payload: updatedCv,
+      timestamp: new Date(),
     });
 
     return updatedCv;
@@ -188,11 +190,12 @@ export class CvsService {
     await this.cvLogsService.log('DELETE', id, cv.user.id);
 
     // SSE EVENT
-    this.sseService.publish({
+    this.eventEmitter.emit(CV_EVENTS.modify, {
       type: 'CV_DELETED',
       cvId: cv.id,
       ownerId: cv.user.id,
       payload: cv,
+      timestamp: new Date(),
     });
   }
 
