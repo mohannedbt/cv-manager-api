@@ -12,6 +12,7 @@ import { UpdateCvDto } from './dto/update-cv.dto';
 import { User } from '../users/entities/user.entity';
 import { Skill } from '../skills/entities/skill.entity';
 import { AuthenticatedUser } from '../common/interfaces/auth.interface';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 type CvFilters = {
   name?: string;
@@ -27,6 +28,7 @@ export class CvsService {
     private userRepository: Repository<User>,
     @InjectRepository(Skill)
     private skillRepository: Repository<Skill>,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async create(createCvDto: CreateCvDto, actor: AuthenticatedUser): Promise<Cv> {
@@ -40,11 +42,15 @@ export class CvsService {
       throw new BadRequestException('CV owner must match authenticated user');
     }
 
-    return this.cvRepository.save({
+    const savedCv = await this.cvRepository.save({
       ...cvData,
       user,
       skills: skills ?? undefined,
     });
+
+    this.eventEmitter.emit('cv.created', savedCv);
+
+    return savedCv;
   }
 
   async findAll(actor: AuthenticatedUser, filters?: CvFilters): Promise<Cv[]> {

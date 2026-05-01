@@ -7,6 +7,8 @@ import { SkillsModule } from './skills/skills.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 import { AuthModule } from './auth/auth.module'; 
 
@@ -43,6 +45,8 @@ if (process.env.ALLOW_PARENT_ENV === 'true') {
     SkillsModule,
     // AuthModule exports auth providers/strategies used by guards.
     AuthModule,
+    EventEmitterModule.forRoot(),
+    WebhooksModule,
   ],
   // Root controller/provider are app bootstrap defaults.
   controllers: [AppController],
