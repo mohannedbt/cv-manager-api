@@ -10,6 +10,7 @@ import { join } from 'path';
 
 import { AuthModule } from './auth/auth.module'; 
 import { CvLogsModule } from './cv-logs/cv-logs.module';
+import { ChatModule } from './chat/chat.module';
 
 const envFilePath = [join(process.cwd(), '.env')];
 
@@ -45,6 +46,7 @@ if (process.env.ALLOW_PARENT_ENV === 'true') {
     // AuthModule exports auth providers/strategies used by guards.
     AuthModule,
     CvLogsModule,
+    ChatModule,
   ],
   // Root controller/provider are app bootstrap defaults.
   controllers: [AppController],
