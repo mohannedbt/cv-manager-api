@@ -65,7 +65,7 @@ export class CvsService {
     this.eventEmitter.emit(CV_EVENTS.modify, {
       type: 'CREATE',
       cvId: savedCv.id,
-      ownerId: userId,
+      ownerId: savedCv.user.id,
       payload: savedCv,
       timestamp: new Date(),
     });
@@ -191,7 +191,7 @@ export class CvsService {
 
     // SSE EVENT
     this.eventEmitter.emit(CV_EVENTS.modify, {
-      type: 'CV_DELETED',
+      type: 'DELETE',
       cvId: cv.id,
       ownerId: cv.user.id,
       payload: cv,
