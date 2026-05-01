@@ -9,11 +9,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { Observable, fromEvent } from 'rxjs';
 import { map, filter } from 'rxjs/operators';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-
-export const CV_EVENTS = {
-  modify: 'cv.modified', 
-};
-
+import { CV_EVENTS } from '../cv-logs/entities/cv-event';
 @Controller('events')
 export class SseController {
   constructor(private readonly eventEmitter: EventEmitter2) {}

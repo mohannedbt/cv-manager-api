@@ -12,8 +12,7 @@ import { UpdateCvDto } from './dto/update-cv.dto';
 import { User } from '../users/entities/user.entity';
 import { Skill } from '../skills/entities/skill.entity';
 import { AuthenticatedUser } from '../common/interfaces/auth.interface';
-import { CvLogsService } from '../cv-logs/cv-logs.service';
-import { CV_EVENTS } from '../sse/sse.controller';
+import { CV_EVENTS } from '../cv-logs/entities/cv-event';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 type CvFilters = {
   name?: string;
@@ -30,7 +29,6 @@ export class CvsService {
     private userRepository: Repository<User>,
     @InjectRepository(Skill)
     private skillRepository: Repository<Skill>,
-    private cvLogsService: CvLogsService,
   ) {}
 
   // =========================
@@ -59,8 +57,7 @@ export class CvsService {
 
     // ✅ STEP 1: SAVE FIRST (IMPORTANT FIX)
     const savedCv = await this.cvRepository.save(cv);
-    await this.cvLogsService.log('CREATE', savedCv.id, savedCv.user.id);
-
+    console.log('EMITTING EVENT:', CV_EVENTS.modify);
     // ✅ STEP 2: THEN EMIT SSE EVENT
     this.eventEmitter.emit(CV_EVENTS.modify, {
       type: 'CREATE',
@@ -154,7 +151,6 @@ export class CvsService {
     // save update
     const updatedCv = await this.cvRepository.save(cv);
 
-    await this.cvLogsService.log('UPDATE', id, updatedCv.user.id);
 
     // SSE EVENT
     this.eventEmitter.emit(CV_EVENTS.modify, {
@@ -187,7 +183,6 @@ export class CvsService {
 
     await this.cvRepository.delete(id);
 
-    await this.cvLogsService.log('DELETE', id, cv.user.id);
 
     // SSE EVENT
     this.eventEmitter.emit(CV_EVENTS.modify, {

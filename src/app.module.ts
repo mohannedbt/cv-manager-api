@@ -10,6 +10,7 @@ import { join } from 'path';
 
 import { AuthModule } from './auth/auth.module'; 
 import { CvLogsModule } from './cv-logs/cv-logs.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 const envFilePath = [join(process.cwd(), '.env')];
 
@@ -18,7 +19,12 @@ if (process.env.ALLOW_PARENT_ENV === 'true') {
 }
 
 @Module({
-  imports: [
+  imports: [EventEmitterModule.forRoot({
+  wildcard: true,
+  delimiter: '.',
+  global: true,
+
+}),
     // Global configuration provider, injectable through ConfigService anywhere.
     ConfigModule.forRoot({
       isGlobal: true,
