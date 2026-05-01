@@ -1,0 +1,61 @@
+### Webhook Registration & Testing Flow
+
+@baseUrl = http://localhost:3000
+@contentType = application/json
+@webhookUrl = https://webhook.site/your-unique-id-here
+
+### 1. Register a webhook for cv.created events
+# Replace @webhookUrl with your webhook.site URL
+# @name registerWebhook
+POST {{baseUrl}}/webhooks
+Content-Type: {{contentType}}
+
+{
+  "url": "{{webhookUrl}}",
+  "event": "cv.created"
+}
+
+### 2. Verify webhook was registered (webhook ID: {{registerWebhook.response.body.id}})
+# Expected response: webhook created with id
+
+### 3. Now trigger a CV creation to test the webhook
+# First, register & login a user (see webhook-flow.http)
+# Then create a CV which will emit cv.created event
+# The webhook listener will automatically POST the CV to your webhook.url
+
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "webhooktest",
+  "email": "webhooktest@example.com",
+  "password": "password123"
+}
+
+### 4. Login
+# @name webhookLogin
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "webhooktest",
+  "password": "password123"
+}
+
+### 5. Create CV (this triggers the webhook event)
+@webhookToken = {{webhookLogin.response.body.access_token}}
+
+POST {{baseUrl}}/cvs
+Content-Type: {{contentType}}
+Authorization: Bearer {{webhookToken}}
+
+{
+  "name": "Smith",
+  "firstname": "Jane",
+  "age": 30,
+  "cin": "87654321",
+  "job": "DevOps Engineer"
+}
+
+### 6. Delete webhook after testing (replace 1 with actual webhook ID)
+DELETE {{baseUrl}}/webhooks/1
